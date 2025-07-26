@@ -254,6 +254,9 @@ function componentIntersectsSelection(el, bounds) {
 // #region === Component Handling ===
 
 function addComponent(type) {
+
+  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+
   const group = createComponentGroup(type);
   canvas.appendChild(group);
   enableDrag(group);
@@ -684,6 +687,10 @@ function enableDrag(element) {
 
   // Start the drag operation
   element.addEventListener("mousedown", (e) => {
+    if (wireMode) {
+      e.stopPropagation();
+      return;
+    }
     // SHIFT+CLICK: Add to selection and exit early
     if (e.shiftKey) {
       element.classList.toggle("selected");
@@ -791,6 +798,10 @@ function enableWireDrag(lineElement) {
   };
 
   lineElement.addEventListener("mousedown", (e) => {
+    if (wireMode) {
+      e.stopPropagation();
+      return;
+    }
     // SHIFT+CLICK: Add to selection and exit early
     if (e.shiftKey) {
       lineElement.classList.toggle("selected");
