@@ -152,69 +152,6 @@ function createCurrentSource() {
 // === Dragging ===
 
 // Enables dragging for a single SVG component element
-/*
-function enableDrag(element) {
-  const svg = document.getElementById("canvas");
-  let offsetX = 0;
-  let offsetY = 0;
-
-  // Triggered as the mouse moves while dragging
-  const onMouseMove = (e) => {
-    const cursorPt = getSVGCoordinates(e, svg);
-
-    // Calculate new position using original drag offset
-    let newX = cursorPt.x - offsetX;
-    let newY = cursorPt.y - offsetY;
-
-    // Clamp and snap the position to the grid within bounds
-    const padding = 20;
-    const svgWidth = svg.clientWidth;
-    const svgHeight = svg.clientHeight;
-
-    newX = snapAndClamp(newX, padding, svgWidth - padding);
-    newY = snapAndClamp(newY, padding, svgHeight - padding);
-
-
-    // Preserve existing rotation
-    const rotation = parseInt(element.dataset.rotation) || 0;
-
-    // Apply both translation and rotation in the transform
-    element.setAttribute("transform", `translate(${newX},${newY}) rotate(${rotation})`);
-  };
-
-  // Clean up when mouse is released
-  const onMouseUp = () => {
-    isDraggingComponent = false;
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
-  };
-
-  // Start the drag operation
-  element.addEventListener("mousedown", (e) => {
-  
-      // ✅ Clear previous selections
-    document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
-
-    // ✅ Mark this component as selected
-    element.classList.add("selected");
-    
-    isDraggingComponent = true;
-
-    const cursorPt = getSVGCoordinates(e, svg);
-
-    // Get element's current position
-    const [currentX, currentY] = getTransformXY(element);
-
-    // Store offset between cursor and element origin
-    offsetX = cursorPt.x - currentX;
-    offsetY = cursorPt.y - currentY;
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  });
-}
-*/
-
 function enableDrag(element) {
   const svg = document.getElementById("canvas");
   let startMouseX = 0, startMouseY = 0;
