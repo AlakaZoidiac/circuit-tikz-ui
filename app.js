@@ -84,7 +84,6 @@ function normalizeHex(hex) {
   return hex;
 }
 
-
 function rgbToHex(rgb) {
   if (!rgb) return "#000000";
   if (rgb.startsWith("#")) return rgb; // already hex
@@ -99,6 +98,68 @@ function rgbToHex(rgb) {
   );
 }
 
+function deleteSelectedElements() {
+  const deletedNums = [];
+
+  // === Remove selected components ===
+  document.querySelectorAll("g.component.selected").forEach(el => {
+    deletedNums.push(parseInt(el.dataset.num));
+    el.remove();
+  });
+
+  // If any components were deleted, reindex them
+  if (deletedNums.length > 0) {
+    reindexComponents(Math.min(...deletedNums));
+  }
+
+  // === Remove selected wires ===
+  const deletedWireIds = [];
+  document.querySelectorAll("line.selected").forEach(line => {
+    deletedWireIds.push(line.dataset.id);
+    line.remove();
+  });
+
+  // If any wires were deleted, reindex them
+  if (deletedWireIds.length > 0) {
+    reindexWires(deletedWireIds);
+  }
+}
+
+function reindexComponents(startIndex) {
+  // Get all components sorted by their current num
+  const components = Array.from(document.querySelectorAll("g.component"))
+    .sort((a, b) => parseInt(a.dataset.num) - parseInt(b.dataset.num));
+
+  // Reassign sequential nums and ids
+  components.forEach((el, idx) => {
+    el.dataset.num = idx;
+    el.dataset.id = `comp-${idx}`;
+  });
+
+  // Update the global counter
+  componentId = components.length;
+}
+
+function reindexWires(deletedIds) {
+  // Remove deleted wires from wireSegments
+  for (const id of deletedIds) {
+    const index = wireSegments.findIndex(s => s.id === id);
+    if (index !== -1) wireSegments.splice(index, 1);
+  }
+
+  // Reassign wire IDs sequentially
+  wireSegments.forEach((seg, idx) => {
+    const oldId = seg.id;
+    seg.id = `wire-${idx}`;
+
+    // Update DOM line elements that still exist
+    const lineEl = document.querySelector(`[data-id="${oldId}"]`);
+    if (lineEl) lineEl.dataset.id = seg.id;
+  });
+
+  // Update global counter
+  wireSegmentCounter = wireSegments.length;
+}
 
 // #endregion
 
@@ -385,7 +446,7 @@ function commitWire(x, y) {
     const id = `wire-${wireSegmentCounter++}`;
     wireSegments.push({ id, x1: wireStart.x, y1: wireStart.y, x2: x, y2: y });
 
-    // ✅ Draw as individual line
+    // Draw as individual line
     drawWireLine(id, wireStart.x, wireStart.y, x, y);
   } else {
     const id1 = `wire-${wireSegmentCounter++}`;
@@ -397,7 +458,7 @@ function commitWire(x, y) {
     drawWireLine(id2, wireCurrentMid.x, wireCurrentMid.y, x, y);
   }
 
-  // ✅ Reset for next segment
+  // Reset for next segment
   wireStart = { x, y };
   wireDirection = null;
   previewWire.remove();
@@ -536,14 +597,14 @@ function mergeCollinearWires(segments) {
   });
   
 
-  // ✅ Update global data
+  // Update global data
   wireSegments.length = 0;
   wireSegments.push(...merged);
 
-  // ✅ Clear old wires from DOM
+  // Clear old wires from DOM
   document.querySelectorAll('line[data-id^="wire-"]').forEach(el => el.remove());
 
-  // ✅ Redraw merged wires
+  // Redraw merged wires
   merged.forEach(seg => drawWireLine(seg.id, seg.x1, seg.y1, seg.x2, seg.y2));
 
   bringComponentsToFront();
@@ -577,14 +638,14 @@ function enableDrag(element) {
       let newX = pos.x + dx;
       let newY = pos.y + dy;
   
-      // ✅ Snap & Clamp to grid
+      // Snap & Clamp to grid
       newX = snapAndClamp(newX, padding, svgWidth - padding);
       newY = snapAndClamp(newY, padding, svgHeight - padding);
   
       moveComponent(pos.el, newX, newY, rotation);
     });
 
-        // ✅ Move selected wires too
+        // Move selected wires too
     wirePositions.forEach(pos => {
       const newX1 = pos.x1 + dx;
       const newY1 = pos.y1 + dy;
@@ -601,7 +662,7 @@ function enableDrag(element) {
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("mouseup", onMouseUp);
 
-    // ✅ Snap wires to grid and update wireSegments
+    // Snap wires to grid and update wireSegments
     wirePositions.forEach(pos => {
       const id = pos.el.dataset.id;
       const seg = wireSegments.find(s => s.id === id);
@@ -623,7 +684,13 @@ function enableDrag(element) {
 
   // Start the drag operation
   element.addEventListener("mousedown", (e) => {
-    // ✅ If this component wasn’t selected, clear previous selections
+    // SHIFT+CLICK: Add to selection and exit early
+    if (e.shiftKey) {
+      element.classList.toggle("selected");
+      e.stopPropagation();
+      return;
+    }
+    // If this component wasn’t selected, clear previous selections
     if (!element.classList.contains("selected")) {
       document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
       element.classList.add("selected");
@@ -635,14 +702,14 @@ function enableDrag(element) {
     startMouseX = cursorPt.x;
     startMouseY = cursorPt.y;
 
-    // ✅ Save positions of all currently selected components
+    // Save positions of all currently selected components
     initialPositions = [];
     document.querySelectorAll("g.component.selected").forEach(sel => {
       const [sx, sy] = getTransformXY(sel);
       initialPositions.push({ el: sel, x: sx, y: sy });
     });
 
-    // ✅ Also store initial positions of selected wires
+    // Also store initial positions of selected wires
     wirePositions = [];
     document.querySelectorAll("line.selected").forEach(line => {
       wirePositions.push({
@@ -680,7 +747,7 @@ function enableWireDrag(lineElement) {
       moveWire(pos.el, newX1, newY1, newX2, newY2);
     });
     
-    // ✅ Move selected components too
+    // Move selected components too
     componentPositions.forEach(pos => {
       const rotation = parseInt(pos.el.dataset.rotation) || 0;
       const newX = pos.x + dx;
@@ -694,7 +761,7 @@ function enableWireDrag(lineElement) {
     window.removeEventListener("mousemove", onMouseMove);
     window.removeEventListener("mouseup", onMouseUp);
 
-    // ✅ Snap to grid & update wireSegments data
+    // Snap to grid & update wireSegments data
     initialPositions.forEach(pos => {
       const id = pos.el.dataset.id;
       const seg = wireSegments.find(s => s.id === id);
@@ -711,7 +778,7 @@ function enableWireDrag(lineElement) {
       }
     });
 
-    // ✅ Snap selected components to grid
+    // Snap selected components to grid
     componentPositions.forEach(pos => {
       const [currentX, currentY] = getTransformXY(pos.el);
       const snappedX = snapAndClamp(currentX, 0, svg.clientWidth);
@@ -724,7 +791,13 @@ function enableWireDrag(lineElement) {
   };
 
   lineElement.addEventListener("mousedown", (e) => {
-    // ✅ If not already selected, clear others and select this wire
+    // SHIFT+CLICK: Add to selection and exit early
+    if (e.shiftKey) {
+      lineElement.classList.toggle("selected");
+      e.stopPropagation();
+      return;
+    }
+    // If not already selected, clear others and select this wire
     if (!lineElement.classList.contains("selected")) {
       document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
       lineElement.classList.add("selected");
@@ -736,7 +809,7 @@ function enableWireDrag(lineElement) {
     startMouseX = cursorPt.x;
     startMouseY = cursorPt.y;
 
-    // ✅ Get all selected wires
+    // Get all selected wires
     initialPositions = [];
     document.querySelectorAll("line.selected").forEach(sel => {
       initialPositions.push({
@@ -748,7 +821,7 @@ function enableWireDrag(lineElement) {
       });
     });
 
-    // ✅ Also store initial positions of selected components
+    // Also store initial positions of selected components
     componentPositions = [];
     document.querySelectorAll("g.component.selected").forEach(sel => {
       const [sx, sy] = getTransformXY(sel);
@@ -816,7 +889,7 @@ canvas.addEventListener("mousemove", (e) => {
 window.addEventListener("mouseup", () => {
   const bounds = getSelectionBounds();
 
-  // ✅ Remove selection rectangle
+  // Remove selection rectangle
   if (selectionBox) {
     selectionBox.remove();
     selectionBox = null;
@@ -858,7 +931,7 @@ window.addEventListener("keydown", (e) => {
 
   // 🔁 Rotate selected component on 'r' key
   if (e.key === "r") {
-    // ✅ Get all selected components
+    // Get all selected components
     const selectedComponents = document.querySelectorAll("g.component.selected");
   
     selectedComponents.forEach(selected => {
@@ -866,13 +939,18 @@ window.addEventListener("keydown", (e) => {
       rotation = (rotation + 90) % 360;
       selected.dataset.rotation = rotation;
   
-      // ✅ Get current position (translate stays the same)
+      // Get current position (translate stays the same)
       const [x, y] = getTransformXY(selected);
   
-      // ✅ Apply updated transform
+      // Apply updated transform
       selected.setAttribute("transform", `translate(${x},${y}) rotate(${rotation})`);
     });
   }  
+
+  // 🗑️ Delete selected components and wires
+  if (e.key === "Delete") {
+    deleteSelectedElements();
+  }
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -975,7 +1053,7 @@ function exportComponentData() {
 
 // #endregion
 
-// #region === SIMPLE SELECTION EDITOR ===
+// #region === Selection Editor ===
 const editBtn = document.getElementById("editSelectedBtn");
 const editDropdown = document.getElementById("editDropdown");
 const colorControl = document.getElementById("colorControl");
