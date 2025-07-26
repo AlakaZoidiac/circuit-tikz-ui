@@ -18,6 +18,29 @@ let isDraggingComponent = false;
 let wireSegmentCounter = 0;
 const wireSegments = [];
 
+// === Helper Functions ===
+
+// Extracts the current translate(x, y) values from an element's transform string
+function getTransformXY(element) {
+  const transform = element.getAttribute("transform");
+  const match = /translate\(([-\d.]+),([-\d.]+)\)/.exec(transform);
+  return match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
+}
+
+// Converts a mouse event into SVG-local coordinates
+function getSVGCoordinates(event, svg) {
+  const pt = svg.createSVGPoint();
+  pt.x = event.clientX;
+  pt.y = event.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+// Snaps a value to the nearest grid point and clamps it between min and max
+function snapAndClamp(value, min, max) {
+  const snapped = Math.round(value / GRID_SIZE) * GRID_SIZE;
+  return Math.max(min, Math.min(snapped, max));
+}
+
 // === Initialization ===
 window.onload = () => drawGrid();
 
@@ -46,7 +69,6 @@ function createSVGLine(x1, y1, x2, y2) {
   line.setAttribute("stroke-width", "1");
   return line;
 }
-
 
 // === Component Handling ===
 
@@ -85,6 +107,16 @@ function createShapeByType(type) {
     case "current": return createCurrentSource();
     default: return [];
   }
+}
+
+// Brings all component elements to the front of the SVG stacking order.
+function bringComponentsToFront() {
+  const svg = document.getElementById("canvas");
+  const components = svg.querySelectorAll("g.component");
+
+  components.forEach(el => {
+    svg.appendChild(el); // moves to end of DOM = top of rendering order
+  });
 }
 
 // === Component Shapes ===
@@ -259,6 +291,65 @@ function enableDrag(element) {
   });
 }
 
+// === Selection ===
+
+// Any other small helpers like getSelectionBounds, wireIntersectsSelection, componentIntersectsSelection
+function getSelectionBounds() {
+  if (!selectionBox || !selectStart) return null;
+  return {
+    x: parseFloat(selectionBox.getAttribute("x")),
+    y: parseFloat(selectionBox.getAttribute("y")),
+    width: parseFloat(selectionBox.getAttribute("width")),
+    height: parseFloat(selectionBox.getAttribute("height"))
+  };
+}
+
+// Checks if a wire segment intersects with the selection rectangle bounds.
+function wireIntersectsSelection(seg, bounds) {
+  const xMin = Math.min(seg.x1, seg.x2);
+  const xMax = Math.max(seg.x1, seg.x2);
+  const yMin = Math.min(seg.y1, seg.y2);
+  const yMax = Math.max(seg.y1, seg.y2);
+
+  return (
+    xMax >= bounds.x &&
+    xMin <= bounds.x + bounds.width &&
+    yMax >= bounds.y &&
+    yMin <= bounds.y + bounds.height
+  );
+}
+
+// Checks if a component element intersects with the selection rectangle bounds.
+function componentIntersectsSelection(el, bounds) {
+  const [x, y] = getTransformXY(el); // center position
+  let width = 0, height = 0;
+
+  switch (el.dataset.type) {
+    case "resistor":
+      width = 80; height = 40;
+      break;
+    case "voltage":
+    case "current":
+      width = 60; height = 60;
+      break;
+    default:
+      return false;
+  }
+
+  const left = x - width / 2;
+  const right = x + width / 2;
+  const top = y - height / 2;
+  const bottom = y + height / 2;
+
+  return (
+    right >= bounds.x &&
+    left <= bounds.x + bounds.width &&
+    bottom >= bounds.y &&
+    top <= bounds.y + bounds.height
+  );
+}
+
+
 // === Wire Mode ===
 
 function startWire(x, y) {
@@ -270,6 +361,7 @@ function startWire(x, y) {
   previewWire.setAttribute("stroke", "#000");
   previewWire.setAttribute("stroke-width", "2");
   canvas.appendChild(previewWire);
+  bringComponentsToFront();
 }
 
 function updateWirePreview(endX, endY) {
@@ -301,6 +393,7 @@ function updateWirePreview(endX, endY) {
 
   const points = `${wireStart.x},${wireStart.y} ${midX},${midY} ${endX},${endY}`;
   previewWire.setAttribute("points", points);
+  bringComponentsToFront();
 }
 
 function commitWire(x, y) {
@@ -349,6 +442,7 @@ function drawWireLine(id, x1, y1, x2, y2) {
   canvas.appendChild(line);
 
   enableWireDrag(line);
+  bringComponentsToFront();
 }
 
 function activateWireMode() {
@@ -450,6 +544,7 @@ function mergeCollinearWires(segments) {
   // ✅ Redraw merged wires
   merged.forEach(seg => drawWireLine(seg.id, seg.x1, seg.y1, seg.x2, seg.y2));
 
+  bringComponentsToFront();
   return merged;
 }
 
@@ -632,7 +727,6 @@ window.addEventListener("mouseup", () => {
   });
 });
 
-
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && wireMode) {
     exitWireMode();
@@ -736,90 +830,5 @@ function exportComponentData() {
     { components: componentData, wires },
     null,
     2
-  );
-}
-
-// === Helper Functions ===
-
-// Extracts the current translate(x, y) values from an element's transform string
-function getTransformXY(element) {
-  const transform = element.getAttribute("transform");
-  const match = /translate\(([-\d.]+),([-\d.]+)\)/.exec(transform);
-  return match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
-}
-
-// Converts a mouse event into SVG-local coordinates
-function getSVGCoordinates(event, svg) {
-  const pt = svg.createSVGPoint();
-  pt.x = event.clientX;
-  pt.y = event.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
-}
-
-// Snaps a value to the nearest grid point and clamps it between min and max
-function snapAndClamp(value, min, max) {
-  const snapped = Math.round(value / GRID_SIZE) * GRID_SIZE;
-  return Math.max(min, Math.min(snapped, max));
-}
-
-function bringComponentsToFront() {
-  const svg = document.getElementById("canvas");
-  const components = svg.querySelectorAll("g.component");
-
-  components.forEach(el => {
-    svg.appendChild(el); // moves to end of DOM = top of rendering order
-  });
-}
-
-function getSelectionBounds() {
-  if (!selectionBox || !selectStart) return null;
-  return {
-    x: parseFloat(selectionBox.getAttribute("x")),
-    y: parseFloat(selectionBox.getAttribute("y")),
-    width: parseFloat(selectionBox.getAttribute("width")),
-    height: parseFloat(selectionBox.getAttribute("height"))
-  };
-}
-
-function wireIntersectsSelection(seg, bounds) {
-  const xMin = Math.min(seg.x1, seg.x2);
-  const xMax = Math.max(seg.x1, seg.x2);
-  const yMin = Math.min(seg.y1, seg.y2);
-  const yMax = Math.max(seg.y1, seg.y2);
-
-  return (
-    xMax >= bounds.x &&
-    xMin <= bounds.x + bounds.width &&
-    yMax >= bounds.y &&
-    yMin <= bounds.y + bounds.height
-  );
-}
-
-function componentIntersectsSelection(el, bounds) {
-  const [x, y] = getTransformXY(el); // center position
-  let width = 0, height = 0;
-
-  switch (el.dataset.type) {
-    case "resistor":
-      width = 80; height = 40;
-      break;
-    case "voltage":
-    case "current":
-      width = 60; height = 60;
-      break;
-    default:
-      return false;
-  }
-
-  const left = x - width / 2;
-  const right = x + width / 2;
-  const top = y - height / 2;
-  const bottom = y + height / 2;
-
-  return (
-    right >= bounds.x &&
-    left <= bounds.x + bounds.width &&
-    bottom >= bounds.y &&
-    top <= bounds.y + bounds.height
   );
 }
