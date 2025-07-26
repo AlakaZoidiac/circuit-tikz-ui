@@ -108,17 +108,12 @@ function componentIntersectsSelection(el, bounds) {
   const [x, y] = getTransformXY(el); // center position
   let width = 0, height = 0;
 
-  switch (el.dataset.type) {
-    case "resistor":
-      width = 80; height = 40;
-      break;
-    case "voltage":
-    case "current":
-      width = 60; height = 60;
-      break;
-    default:
-      return false;
+  const comp = COMPONENTS[el.dataset.type];
+  if (comp) {
+    width = comp.width;
+    height = comp.height;
   }
+
 
   const left = x - width / 2;
   const right = x + width / 2;
@@ -132,6 +127,28 @@ function componentIntersectsSelection(el, bounds) {
     top <= bounds.y + bounds.height
   );
 }
+
+// #endregion
+
+// #region === Component Registry ===
+
+const COMPONENTS = {
+  resistor: {
+    width: 80,
+    height: 40,
+    draw: createResistor
+  },
+  voltage: {
+    width: 60,
+    height: 60,
+    draw: createVoltageSource
+  },
+  current: {
+    width: 60,
+    height: 60,
+    draw: createCurrentSource
+  }
+};
 
 // #endregion
 
@@ -166,13 +183,13 @@ function createComponentGroup(type) {
 
 // Return an array of SVG elements representing the given type
 function createShapeByType(type) {
-  switch (type) {
-    case "resistor": return createResistor();
-    case "voltage": return createVoltageSource();
-    case "current": return createCurrentSource();
-    default: return [];
+  if (COMPONENTS[type]) {
+    return COMPONENTS[type].draw();
   }
+  console.warn(`Unknown component type: ${type}`);
+  return document.createElementNS("http://www.w3.org/2000/svg", "g");
 }
+
 
 // Brings all component elements to the front of the SVG stacking order.
 function bringComponentsToFront() {
