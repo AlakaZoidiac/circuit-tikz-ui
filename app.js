@@ -1,4 +1,4 @@
-// === Global Constants and State ===
+// #region === Global Constants and State ===
 
 // Canvas and grid setup
 const GRID_SIZE = 40;
@@ -17,6 +17,8 @@ let isDraggingComponent = false;
 
 let wireSegmentCounter = 0;
 const wireSegments = [];
+
+// #endregion
 
 // #region === Helper Functions ===
 
@@ -43,12 +45,9 @@ function snapAndClamp(value, min, max) {
 
 // #endregion
 
-// #region === Initialization ===
+// #region === Initialization & Grid Drawing ===
 window.onload = () => drawGrid();
 
-// #endregion
-
-// #region === Grid Drawing ===
 function drawGrid() {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -72,6 +71,66 @@ function createSVGLine(x1, y1, x2, y2) {
   line.setAttribute("stroke", "#ddd");
   line.setAttribute("stroke-width", "1");
   return line;
+}
+
+// #endregion
+
+// #region === Selection ===
+
+// Any other small helpers like getSelectionBounds, wireIntersectsSelection, componentIntersectsSelection
+function getSelectionBounds() {
+  if (!selectionBox || !selectStart) return null;
+  return {
+    x: parseFloat(selectionBox.getAttribute("x")),
+    y: parseFloat(selectionBox.getAttribute("y")),
+    width: parseFloat(selectionBox.getAttribute("width")),
+    height: parseFloat(selectionBox.getAttribute("height"))
+  };
+}
+
+// Checks if a wire segment intersects with the selection rectangle bounds.
+function wireIntersectsSelection(seg, bounds) {
+  const xMin = Math.min(seg.x1, seg.x2);
+  const xMax = Math.max(seg.x1, seg.x2);
+  const yMin = Math.min(seg.y1, seg.y2);
+  const yMax = Math.max(seg.y1, seg.y2);
+
+  return (
+    xMax >= bounds.x &&
+    xMin <= bounds.x + bounds.width &&
+    yMax >= bounds.y &&
+    yMin <= bounds.y + bounds.height
+  );
+}
+
+// Checks if a component element intersects with the selection rectangle bounds.
+function componentIntersectsSelection(el, bounds) {
+  const [x, y] = getTransformXY(el); // center position
+  let width = 0, height = 0;
+
+  switch (el.dataset.type) {
+    case "resistor":
+      width = 80; height = 40;
+      break;
+    case "voltage":
+    case "current":
+      width = 60; height = 60;
+      break;
+    default:
+      return false;
+  }
+
+  const left = x - width / 2;
+  const right = x + width / 2;
+  const top = y - height / 2;
+  const bottom = y + height / 2;
+
+  return (
+    right >= bounds.x &&
+    left <= bounds.x + bounds.width &&
+    bottom >= bounds.y &&
+    top <= bounds.y + bounds.height
+  );
 }
 
 // #endregion
@@ -187,178 +246,6 @@ function createCurrentSource() {
   arrow.setAttribute("stroke-width", "2");
 
   return [circle, arrow];
-}
-
-// #endregion
-
-// #region === Dragging ===
-
-// Enables dragging for a single SVG component element
-function enableDrag(element) {
-  const svg = document.getElementById("canvas");
-  let startMouseX = 0, startMouseY = 0;
-  let initialPositions = [];
-  let wirePositions = [];
-
-  // Triggered as the mouse moves while dragging
-  const onMouseMove = (e) => {
-    const cursorPt = getSVGCoordinates(e, svg);
-    const dx = cursorPt.x - startMouseX;
-    const dy = cursorPt.y - startMouseY;
-  
-    const padding = 20;
-    const svgWidth = svg.clientWidth;
-    const svgHeight = svg.clientHeight;
-  
-    // Move all selected components
-    initialPositions.forEach(pos => {
-      const rotation = parseInt(pos.el.dataset.rotation) || 0;
-      let newX = pos.x + dx;
-      let newY = pos.y + dy;
-  
-      // ✅ Snap & Clamp to grid
-      newX = snapAndClamp(newX, padding, svgWidth - padding);
-      newY = snapAndClamp(newY, padding, svgHeight - padding);
-  
-      pos.el.setAttribute("transform", `translate(${newX},${newY}) rotate(${rotation})`);
-    });
-
-        // ✅ Move selected wires too
-    wirePositions.forEach(pos => {
-      const newX1 = pos.x1 + dx;
-      const newY1 = pos.y1 + dy;
-      const newX2 = pos.x2 + dx;
-      const newY2 = pos.y2 + dy;
-      pos.el.setAttribute("x1", newX1);
-      pos.el.setAttribute("y1", newY1);
-      pos.el.setAttribute("x2", newX2);
-      pos.el.setAttribute("y2", newY2);
-    });
-  };
-  
-
-  // Clean up when mouse is released
-  const onMouseUp = () => {
-    isDraggingComponent = false;
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("mouseup", onMouseUp);
-
-    // ✅ Snap wires to grid and update wireSegments
-    wirePositions.forEach(pos => {
-      const id = pos.el.dataset.id;
-      const seg = wireSegments.find(s => s.id === id);
-      if (seg) {
-        // Snap endpoints
-        seg.x1 = snapAndClamp(parseFloat(pos.el.getAttribute("x1")), 0, svg.clientWidth);
-        seg.y1 = snapAndClamp(parseFloat(pos.el.getAttribute("y1")), 0, svg.clientHeight);
-        seg.x2 = snapAndClamp(parseFloat(pos.el.getAttribute("x2")), 0, svg.clientWidth);
-        seg.y2 = snapAndClamp(parseFloat(pos.el.getAttribute("y2")), 0, svg.clientHeight);
-
-        // Apply snapped values back to DOM
-        pos.el.setAttribute("x1", seg.x1);
-        pos.el.setAttribute("y1", seg.y1);
-        pos.el.setAttribute("x2", seg.x2);
-        pos.el.setAttribute("y2", seg.y2);
-      }
-    });
-  };
-
-  // Start the drag operation
-  element.addEventListener("mousedown", (e) => {
-    // ✅ If this component wasn’t selected, clear previous selections
-    if (!element.classList.contains("selected")) {
-      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
-      element.classList.add("selected");
-    }
-
-    isDraggingComponent = true;
-
-    const cursorPt = getSVGCoordinates(e, svg);
-    startMouseX = cursorPt.x;
-    startMouseY = cursorPt.y;
-
-    // ✅ Save positions of all currently selected components
-    initialPositions = [];
-    document.querySelectorAll("g.component.selected").forEach(sel => {
-      const [sx, sy] = getTransformXY(sel);
-      initialPositions.push({ el: sel, x: sx, y: sy });
-    });
-
-    // ✅ Also store initial positions of selected wires
-    wirePositions = [];
-    document.querySelectorAll("line.selected").forEach(line => {
-      wirePositions.push({
-        el: line,
-        x1: parseFloat(line.getAttribute("x1")),
-        y1: parseFloat(line.getAttribute("y1")),
-        x2: parseFloat(line.getAttribute("x2")),
-        y2: parseFloat(line.getAttribute("y2"))
-      });
-    });
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  });
-}
-
-// #endregion
-
-// #region === Selection ===
-
-// Any other small helpers like getSelectionBounds, wireIntersectsSelection, componentIntersectsSelection
-function getSelectionBounds() {
-  if (!selectionBox || !selectStart) return null;
-  return {
-    x: parseFloat(selectionBox.getAttribute("x")),
-    y: parseFloat(selectionBox.getAttribute("y")),
-    width: parseFloat(selectionBox.getAttribute("width")),
-    height: parseFloat(selectionBox.getAttribute("height"))
-  };
-}
-
-// Checks if a wire segment intersects with the selection rectangle bounds.
-function wireIntersectsSelection(seg, bounds) {
-  const xMin = Math.min(seg.x1, seg.x2);
-  const xMax = Math.max(seg.x1, seg.x2);
-  const yMin = Math.min(seg.y1, seg.y2);
-  const yMax = Math.max(seg.y1, seg.y2);
-
-  return (
-    xMax >= bounds.x &&
-    xMin <= bounds.x + bounds.width &&
-    yMax >= bounds.y &&
-    yMin <= bounds.y + bounds.height
-  );
-}
-
-// Checks if a component element intersects with the selection rectangle bounds.
-function componentIntersectsSelection(el, bounds) {
-  const [x, y] = getTransformXY(el); // center position
-  let width = 0, height = 0;
-
-  switch (el.dataset.type) {
-    case "resistor":
-      width = 80; height = 40;
-      break;
-    case "voltage":
-    case "current":
-      width = 60; height = 60;
-      break;
-    default:
-      return false;
-  }
-
-  const left = x - width / 2;
-  const right = x + width / 2;
-  const top = y - height / 2;
-  const bottom = y + height / 2;
-
-  return (
-    right >= bounds.x &&
-    left <= bounds.x + bounds.width &&
-    bottom >= bounds.y &&
-    top <= bounds.y + bounds.height
-  );
 }
 
 // #endregion
@@ -561,6 +448,119 @@ function mergeCollinearWires(segments) {
   return merged;
 }
 
+// #endregion
+
+// #region === Dragging ===
+
+// Enables dragging for a single SVG component element
+function enableDrag(element) {
+  const svg = document.getElementById("canvas");
+  let startMouseX = 0, startMouseY = 0;
+  let initialPositions = [];
+  let wirePositions = [];
+
+  // Triggered as the mouse moves while dragging
+  const onMouseMove = (e) => {
+    const cursorPt = getSVGCoordinates(e, svg);
+    const dx = cursorPt.x - startMouseX;
+    const dy = cursorPt.y - startMouseY;
+  
+    const padding = 20;
+    const svgWidth = svg.clientWidth;
+    const svgHeight = svg.clientHeight;
+  
+    // Move all selected components
+    initialPositions.forEach(pos => {
+      const rotation = parseInt(pos.el.dataset.rotation) || 0;
+      let newX = pos.x + dx;
+      let newY = pos.y + dy;
+  
+      // ✅ Snap & Clamp to grid
+      newX = snapAndClamp(newX, padding, svgWidth - padding);
+      newY = snapAndClamp(newY, padding, svgHeight - padding);
+  
+      pos.el.setAttribute("transform", `translate(${newX},${newY}) rotate(${rotation})`);
+    });
+
+        // ✅ Move selected wires too
+    wirePositions.forEach(pos => {
+      const newX1 = pos.x1 + dx;
+      const newY1 = pos.y1 + dy;
+      const newX2 = pos.x2 + dx;
+      const newY2 = pos.y2 + dy;
+      pos.el.setAttribute("x1", newX1);
+      pos.el.setAttribute("y1", newY1);
+      pos.el.setAttribute("x2", newX2);
+      pos.el.setAttribute("y2", newY2);
+    });
+  };
+  
+
+  // Clean up when mouse is released
+  const onMouseUp = () => {
+    isDraggingComponent = false;
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+
+    // ✅ Snap wires to grid and update wireSegments
+    wirePositions.forEach(pos => {
+      const id = pos.el.dataset.id;
+      const seg = wireSegments.find(s => s.id === id);
+      if (seg) {
+        // Snap endpoints
+        seg.x1 = snapAndClamp(parseFloat(pos.el.getAttribute("x1")), 0, svg.clientWidth);
+        seg.y1 = snapAndClamp(parseFloat(pos.el.getAttribute("y1")), 0, svg.clientHeight);
+        seg.x2 = snapAndClamp(parseFloat(pos.el.getAttribute("x2")), 0, svg.clientWidth);
+        seg.y2 = snapAndClamp(parseFloat(pos.el.getAttribute("y2")), 0, svg.clientHeight);
+
+        // Apply snapped values back to DOM
+        pos.el.setAttribute("x1", seg.x1);
+        pos.el.setAttribute("y1", seg.y1);
+        pos.el.setAttribute("x2", seg.x2);
+        pos.el.setAttribute("y2", seg.y2);
+      }
+    });
+  };
+
+  // Start the drag operation
+  element.addEventListener("mousedown", (e) => {
+    // ✅ If this component wasn’t selected, clear previous selections
+    if (!element.classList.contains("selected")) {
+      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+      element.classList.add("selected");
+    }
+
+    isDraggingComponent = true;
+
+    const cursorPt = getSVGCoordinates(e, svg);
+    startMouseX = cursorPt.x;
+    startMouseY = cursorPt.y;
+
+    // ✅ Save positions of all currently selected components
+    initialPositions = [];
+    document.querySelectorAll("g.component.selected").forEach(sel => {
+      const [sx, sy] = getTransformXY(sel);
+      initialPositions.push({ el: sel, x: sx, y: sy });
+    });
+
+    // ✅ Also store initial positions of selected wires
+    wirePositions = [];
+    document.querySelectorAll("line.selected").forEach(line => {
+      wirePositions.push({
+        el: line,
+        x1: parseFloat(line.getAttribute("x1")),
+        y1: parseFloat(line.getAttribute("y1")),
+        x2: parseFloat(line.getAttribute("x2")),
+        y2: parseFloat(line.getAttribute("y2"))
+      });
+    });
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  });
+}
+
+// Enables dragging for wire elements
 function enableWireDrag(lineElement) {
   const svg = document.getElementById("canvas");
   let startMouseX = 0, startMouseY = 0;
