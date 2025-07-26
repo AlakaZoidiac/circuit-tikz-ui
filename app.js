@@ -418,8 +418,15 @@ function drawWireLine(id, x1, y1, x2, y2) {
   line.setAttribute("x2", x2);
   line.setAttribute("y2", y2);
   line.setAttribute("stroke", "#000");
-  line.setAttribute("stroke", SETTINGS.wire.stroke);
-  line.setAttribute("stroke-width", SETTINGS.wire.width);
+  // Find this wire in wireSegments
+  const seg = wireSegments.find(s => s.id === id);
+
+  // Use per-wire color if available
+  const strokeColor = seg?.color || SETTINGS.wire.stroke;
+  const strokeWidth = seg?.width || SETTINGS.wire.width;
+
+  line.setAttribute("stroke", strokeColor);
+  line.setAttribute("stroke-width", strokeWidth);
   canvas.appendChild(line);
 
   enableWireDrag(line);
@@ -513,7 +520,21 @@ function mergeCollinearWires(segments) {
   const merged = [
     ...mergeLineSegments(horizGrouped, true),
     ...mergeLineSegments(vertGrouped, false)
-  ].map((seg, idx) => ({ id: `wire-${idx}`, ...seg }));
+  ].map((seg, idx) => {
+    // Try to find original segment to copy color/width
+    const original = wireSegments.find(s =>
+      (s.x1 === seg.x1 && s.y1 === seg.y1 && s.x2 === seg.x2 && s.y2 === seg.y2) ||
+      (s.x1 === seg.x2 && s.y1 === seg.y2 && s.x2 === seg.x1 && s.y2 === seg.y1)
+    );
+  
+    return {
+      id: `wire-${idx}`,
+      ...seg,
+      color: original?.color || SETTINGS.wire.stroke,
+      width: original?.width || SETTINGS.wire.width
+    };
+  });
+  
 
   // ✅ Update global data
   wireSegments.length = 0;
@@ -915,8 +936,20 @@ function exportComponentData() {
     const [x, y] = match ? [parseFloat(match[1]), parseFloat(match[2])] : [0, 0];
 
     if (type) {
-      componentData.push({ id, type, x, y, rotation });
+      // detect component color (use fill or fallback to SETTINGS)
+      const shape = el.querySelector("rect, circle");
+      const fill = shape?.getAttribute("fill") || SETTINGS.components[type].fill;
+    
+      componentData.push({
+        id,
+        type,
+        x,
+        y,
+        rotation,
+        color: fill // include current component color
+      });
     }
+    
   });
 
   // === Export wires after merging collinear segments ===
@@ -927,7 +960,9 @@ function exportComponentData() {
     x1: seg.x1,
     y1: seg.y1,
     x2: seg.x2,
-    y2: seg.y2
+    y2: seg.y2,
+    color: seg.color || SETTINGS.wire.stroke,       // store wire color
+    thickness: seg.width || SETTINGS.wire.width     // store wire thickness
   }));
 
   // === Final output ===
@@ -1023,7 +1058,7 @@ colorPicker.addEventListener("input", (e) => {
   });
 
   // Also update default wire color for new wires
-  SETTINGS.wire.stroke = newColor;
+  // SETTINGS.wire.stroke = newColor;
 });
 
 
@@ -1034,6 +1069,10 @@ wireWidthSlider.addEventListener("input", (e) => {
   // Apply to selected wires
   document.querySelectorAll("line.selected").forEach((line) => {
     line.setAttribute("stroke-width", newWidth);
+
+    // Store width in wireSegments for export
+    const seg = wireSegments.find(s => s.id === line.dataset.id);
+    if (seg) seg.width = newWidth;
   });
 
   // Track this width in SETTINGS for future wires
