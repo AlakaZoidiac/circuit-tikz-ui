@@ -18,6 +18,15 @@
       <button onclick="addComponent('voltage')">Voltage Source</button>
       <button onclick="addComponent('current')">Current Source</button>
       <button onclick="activateWireMode()">Wire Tool</button>
+      <button id="editSelectedBtn">Edit Selected</button>
+      <div id="editDropdown" style="display:none; position:absolute; top:50px; right:10px; background:white; border:1px solid #ccc; padding:5px; z-index:1000;">
+        <div id="colorControl">
+          <label>Color: <input type="color" id="selectedColor" value="#ff0000"></label>
+        </div>
+        <div id="widthControl" style="display:none;">
+          <label>Wire Width: <input type="range" id="selectedWireWidth" min="1" max="6" value="2"></label>
+        </div>
+      </div>
     </div>
 
     <svg id="canvas"></svg>

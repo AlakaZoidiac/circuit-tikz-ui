@@ -30,21 +30,21 @@ const SETTINGS = {
   },
   components: {
     resistor: {
-      width: 80,
-      height: 40,
+      width: 60,
+      height: 30,
       stroke: "#000",
       fill: "#ccc",
       draw: createResistor
     },
     voltage: {
       radius: 30,
-      stroke: "#333",
+      stroke: "#000",
       fill: "#eef",
       draw: createVoltageSource
     },
     current: {
       radius: 30,
-      stroke: "#333",
+      stroke: "#000",
       fill: "#efe",
       draw: createCurrentSource
     }
@@ -76,6 +76,29 @@ function snapAndClamp(value, min, max) {
   const snapped = Math.round(value / GRID_SIZE) * GRID_SIZE;
   return Math.max(min, Math.min(snapped, max));
 }
+
+function normalizeHex(hex) {
+  if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+    return "#" + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+  }
+  return hex;
+}
+
+
+function rgbToHex(rgb) {
+  if (!rgb) return "#000000";
+  if (rgb.startsWith("#")) return rgb; // already hex
+
+  const result = rgb.match(/\d+/g).map(Number);
+  return (
+    "#" +
+    result
+      .map((x) => x.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase()
+  );
+}
+
 
 // #endregion
 
@@ -192,6 +215,7 @@ function createComponentGroup(type) {
   // Add SVG elements for this component
   const children = createShapeByType(type);
   children.forEach(el => group.appendChild(el));
+  group.dataset.fill = SETTINGS.components[type].fill; // Store initial color
 
   return group;
 }
@@ -225,21 +249,27 @@ function createResistor() {
   const { stroke, fill, width, height } = SETTINGS.components.resistor;
 
   const rect = document.createElementNS(ns, "rect");
-  rect.setAttribute("x", -40);
-  rect.setAttribute("y", -20);
+  rect.setAttribute("x", -width / 2);
+  rect.setAttribute("y", -height / 2);
+  rect.setAttribute("rx", 2); // slight rounded corners for a neat look
   rect.setAttribute("width", width);
   rect.setAttribute("height", height);
   rect.setAttribute("stroke", stroke);
+  rect.setAttribute("stroke-width", "2");
   rect.setAttribute("fill", fill);
 
+  /*
   const label = document.createElementNS(ns, "text");
   label.setAttribute("x", 0);
   label.setAttribute("y", 8);
   label.setAttribute("text-anchor", "middle");
   label.setAttribute("font-size", "20");
   label.textContent = "R";
+  */
 
-  return [rect, label];
+
+  // return [rect, label];
+  return [rect];
 }
 
 function createVoltageSource() {
@@ -252,16 +282,26 @@ function createVoltageSource() {
   circle.setAttribute("r", radius);
   circle.setAttribute("fill", fill);
   circle.setAttribute("stroke", stroke);
+  circle.setAttribute("stroke-width", "2");
 
-  const label = document.createElementNS(ns, "text");
-  label.setAttribute("x", 0);
-  label.setAttribute("y", 8);
-  label.setAttribute("text-anchor", "middle");
-  label.setAttribute("font-size", "20");
-  label.textContent = "V";
+  // Plus sign on top
+  const plus = document.createElementNS(ns, "text");
+  plus.setAttribute("x", 0);
+  plus.setAttribute("y", -radius / 2 + 11); // shifted upward
+  plus.setAttribute("text-anchor", "middle");
+  plus.setAttribute("font-size", "24");
+  plus.textContent = "+";
 
-  return [circle, label];
+  // Minus sign on bottom
+  const minus = document.createElementNS(ns, "text");
+  minus.setAttribute("x", 0);
+  minus.setAttribute("y", radius / 2 + 5); // shifted downward
+  minus.setAttribute("text-anchor", "middle");
+  minus.setAttribute("font-size", "24");
+  minus.textContent = "–";
+  return [circle, plus, minus];
 }
+
 
 function createCurrentSource() {
   const ns = "http://www.w3.org/2000/svg";
@@ -273,15 +313,18 @@ function createCurrentSource() {
   circle.setAttribute("r", radius);
   circle.setAttribute("fill", fill);
   circle.setAttribute("stroke", stroke);
+  circle.setAttribute("stroke-width", "2");
 
+  // Downward arrow
   const arrow = document.createElementNS(ns, "path");
-  arrow.setAttribute("d", "M0,-14 L0,14 M-6,8 L0,14 L6,8");
+  arrow.setAttribute("d", `M0,-${radius/2} L0,${radius/2} M-5,${radius/4} L0,${radius/2} L5,${radius/4}`);
   arrow.setAttribute("stroke", "#000");
   arrow.setAttribute("fill", "none");
   arrow.setAttribute("stroke-width", "2");
 
   return [circle, arrow];
 }
+
 
 // #endregion
 
@@ -894,5 +937,106 @@ function exportComponentData() {
     2
   );
 }
+
+// #endregion
+
+// #region === SIMPLE SELECTION EDITOR ===
+const editBtn = document.getElementById("editSelectedBtn");
+const editDropdown = document.getElementById("editDropdown");
+const colorControl = document.getElementById("colorControl");
+const colorPicker = document.getElementById("selectedColor");
+const widthControl = document.getElementById("widthControl");
+const wireWidthSlider = document.getElementById("selectedWireWidth");
+
+// Toggle dropdown only if something is selected
+editBtn.addEventListener("click", () => {
+  const selectedComponents = document.querySelectorAll("g.component.selected");
+  const selectedWires = document.querySelectorAll("line.selected");
+  if (selectedWires.length > 0) {
+    const widthAttr = selectedWires[0].getAttribute("stroke-width");
+    wireWidthSlider.value = widthAttr ? parseInt(widthAttr) : SETTINGS.wire.width;
+  }
+
+  // If nothing is selected, don't open dropdown
+  if (selectedComponents.length === 0 && selectedWires.length === 0) {
+    editDropdown.style.display = "none";
+    return;
+  }
+
+  // Determine the current color of the first selected element
+  let currentColor = "#ff0000";
+
+  if (selectedComponents.length > 0) {
+    const comp = selectedComponents[0];
+    const shape = comp.children[0];
+    let shapeFill = shape ? shape.getAttribute("fill") : null;
+    if (!shapeFill) {
+      shapeFill = SETTINGS.components[comp.dataset.type]?.fill || "#ff0000";
+    }
+    currentColor = normalizeHex(shapeFill.startsWith("#") ? shapeFill : rgbToHex(shapeFill));
+  }
+  
+  // Set picker value
+  colorPicker.value = currentColor;
+
+  // Always show color picker
+  colorControl.style.display = "block";
+
+  // Show wire width slider if any wires are selected
+  widthControl.style.display = selectedWires.length > 0 ? "block" : "none";
+
+  // Toggle dropdown
+  editDropdown.style.display =
+    editDropdown.style.display === "none" ? "block" : "none";
+});
+
+
+// Change color of selected elements (wires + components)
+colorPicker.addEventListener("input", (e) => {
+  const newColor = e.target.value;
+
+  // Components → change fill of their shape
+  document.querySelectorAll("g.component.selected").forEach((comp) => {
+    const shape = comp.querySelector("rect, circle");
+    if (shape) shape.setAttribute("fill", newColor);
+    comp.dataset.fill = newColor; // store updated color on the component
+  });
+
+
+  // Wires → change stroke color
+  document.querySelectorAll("line.selected").forEach((line) => {
+    line.setAttribute("stroke", newColor);
+  });
+
+    // Update SETTINGS for future detections
+  document.querySelectorAll("g.component.selected").forEach((comp) => {
+    const type = comp.dataset.type;
+    SETTINGS.components[type].fill = newColor;
+  });
+});
+
+// Change width of selected wires
+wireWidthSlider.addEventListener("input", (e) => {
+  const newWidth = parseInt(e.target.value);
+
+  // Apply to selected wires
+  document.querySelectorAll("line.selected").forEach((line) => {
+    line.setAttribute("stroke-width", newWidth);
+  });
+
+  // Track this width in SETTINGS for future wires
+  SETTINGS.wire.width = newWidth;
+});
+
+
+// Close dropdown when clicking anywhere outside the dropdown & button
+document.addEventListener("click", (e) => {
+  const isClickInside = editBtn.contains(e.target) || editDropdown.contains(e.target);
+
+  // Only close if it's open and the click is outside
+  if (editDropdown.style.display === "block" && !isClickInside) {
+    editDropdown.style.display = "none";
+  }
+});
 
 // #endregion
