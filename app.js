@@ -18,7 +18,7 @@ let isDraggingComponent = false;
 let wireSegmentCounter = 0;
 const wireSegments = [];
 
-// === Helper Functions ===
+// #region === Helper Functions ===
 
 // Extracts the current translate(x, y) values from an element's transform string
 function getTransformXY(element) {
@@ -41,10 +41,14 @@ function snapAndClamp(value, min, max) {
   return Math.max(min, Math.min(snapped, max));
 }
 
-// === Initialization ===
+// #endregion
+
+// #region === Initialization ===
 window.onload = () => drawGrid();
 
-// === Grid Drawing ===
+// #endregion
+
+// #region === Grid Drawing ===
 function drawGrid() {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
@@ -70,7 +74,9 @@ function createSVGLine(x1, y1, x2, y2) {
   return line;
 }
 
-// === Component Handling ===
+// #endregion
+
+// #region === Component Handling ===
 
 function addComponent(type) {
   const group = createComponentGroup(type);
@@ -119,7 +125,9 @@ function bringComponentsToFront() {
   });
 }
 
-// === Component Shapes ===
+// #endregion
+
+// #region === Component Shapes ===
 
 function createResistor() {
   const ns = "http://www.w3.org/2000/svg";
@@ -181,7 +189,9 @@ function createCurrentSource() {
   return [circle, arrow];
 }
 
-// === Dragging ===
+// #endregion
+
+// #region === Dragging ===
 
 // Enables dragging for a single SVG component element
 function enableDrag(element) {
@@ -291,7 +301,9 @@ function enableDrag(element) {
   });
 }
 
-// === Selection ===
+// #endregion
+
+// #region === Selection ===
 
 // Any other small helpers like getSelectionBounds, wireIntersectsSelection, componentIntersectsSelection
 function getSelectionBounds() {
@@ -349,8 +361,9 @@ function componentIntersectsSelection(el, bounds) {
   );
 }
 
+// #endregion
 
-// === Wire Mode ===
+// #region === Wire Mode ===
 
 function startWire(x, y) {
   wireStart = { x, y };
@@ -652,7 +665,9 @@ function enableWireDrag(lineElement) {
   });
 }
 
-// === Event Bindings ===
+// #endregion
+
+// #region === Event Bindings ===
 
 canvas.addEventListener("mousedown", (e) => {
   if (e.button !== 0 || isDraggingComponent || wireMode) return;
@@ -788,7 +803,9 @@ canvas.addEventListener("dblclick", (e) => {
   }
 });
 
-// === Export ===
+// #endregion
+
+// #region === Export ===
 
 function exportComponentData() {
   const svg = document.getElementById("canvas");
@@ -832,3 +849,5 @@ function exportComponentData() {
     2
   );
 }
+
+// #endregion
