@@ -1,0 +1,84 @@
+/* Remove spacing and ensure full-screen layout */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+/* Toolbar pinned to top */
+.toolbar {
+  background: #eee;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #ccc;
+  height: 50px;
+  box-sizing: border-box;
+}
+
+/* SVG canvas fills remaining space */
+#canvas {
+  flex: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: #fdfdfd;
+}
+
+.app {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  border: 10px solid #666;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-output {
+  background: #f0f0f0;
+  padding: 10px;
+  margin: 0;
+  height: 120px;
+  overflow: auto;
+  font-family: monospace;
+  font-size: 14px;
+  border-top: 1px solid #ccc;
+}
+
+.footer {
+  background: #eee;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+text {
+  user-select: none;
+  pointer-events: none;
+}
+
+.noselect {
+  user-select: none;
+}
+
+/* ✅ For selected components: only stroke turns red, no fill */
+g.component.selected rect,
+g.component.selected circle,
+g.component.selected path {
+  stroke: red !important;
+}
+
+/* ✅ Make text inside selected components red too */
+g.component.selected text {
+  fill: red !important;
+}
+
+polyline.selected {
+  fill: none !important;
+  stroke: red !important;
+}

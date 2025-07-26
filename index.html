@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CircuitTikZ UI</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .selected {
+      stroke: red !important;
+      fill: rgba(255, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="toolbar">
+      <button onclick="addComponent('resistor')">Resistor</button>
+      <button onclick="addComponent('voltage')">Voltage Source</button>
+      <button onclick="addComponent('current')">Current Source</button>
+      <button onclick="activateWireMode()">Wire Tool</button>
+    </div>
+
+    <svg id="canvas"></svg>
+
+    <pre id="output" class="data-output"></pre>
+        <div class="footer">
+            <button onclick="exportComponentData()">Export Data</button>
+        </div>  
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
