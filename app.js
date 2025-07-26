@@ -20,6 +20,40 @@ const wireSegments = [];
 
 // #endregion
 
+// #region === Global Settings ===
+
+const SETTINGS = {
+  gridSize: 20,
+  wire: {
+    stroke: "#000",
+    width: 2
+  },
+  components: {
+    resistor: {
+      width: 80,
+      height: 40,
+      stroke: "#000",
+      fill: "#ccc",
+      draw: createResistor
+    },
+    voltage: {
+      radius: 30,
+      stroke: "#333",
+      fill: "#eef",
+      draw: createVoltageSource
+    },
+    current: {
+      radius: 30,
+      stroke: "#333",
+      fill: "#efe",
+      draw: createCurrentSource
+    }
+  }
+};
+
+
+// #endregion
+
 // #region === Helper Functions ===
 
 // Extracts the current translate(x, y) values from an element's transform string
@@ -108,12 +142,15 @@ function componentIntersectsSelection(el, bounds) {
   const [x, y] = getTransformXY(el); // center position
   let width = 0, height = 0;
 
-  const comp = COMPONENTS[el.dataset.type];
+  const comp = SETTINGS.components[el.dataset.type];
   if (comp) {
-    width = comp.width;
-    height = comp.height;
+    if ("radius" in comp) {
+      width = height = comp.radius * 2;
+    } else {
+      width = comp.width;
+      height = comp.height;
+    }
   }
-
 
   const left = x - width / 2;
   const right = x + width / 2;
@@ -127,28 +164,6 @@ function componentIntersectsSelection(el, bounds) {
     top <= bounds.y + bounds.height
   );
 }
-
-// #endregion
-
-// #region === Component Registry ===
-
-const COMPONENTS = {
-  resistor: {
-    width: 80,
-    height: 40,
-    draw: createResistor
-  },
-  voltage: {
-    width: 60,
-    height: 60,
-    draw: createVoltageSource
-  },
-  current: {
-    width: 60,
-    height: 60,
-    draw: createCurrentSource
-  }
-};
 
 // #endregion
 
@@ -183,8 +198,8 @@ function createComponentGroup(type) {
 
 // Return an array of SVG elements representing the given type
 function createShapeByType(type) {
-  if (COMPONENTS[type]) {
-    return COMPONENTS[type].draw();
+  if (SETTINGS.components[type]) {
+    return SETTINGS.components[type].draw();
   }
   console.warn(`Unknown component type: ${type}`);
   return document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -207,14 +222,15 @@ function bringComponentsToFront() {
 
 function createResistor() {
   const ns = "http://www.w3.org/2000/svg";
+  const { stroke, fill, width, height } = SETTINGS.components.resistor;
 
   const rect = document.createElementNS(ns, "rect");
   rect.setAttribute("x", -40);
   rect.setAttribute("y", -20);
-  rect.setAttribute("width", 80);
-  rect.setAttribute("height", 40);
-  rect.setAttribute("fill", "#ddd");
-  rect.setAttribute("stroke", "#333");
+  rect.setAttribute("width", width);
+  rect.setAttribute("height", height);
+  rect.setAttribute("stroke", stroke);
+  rect.setAttribute("fill", fill);
 
   const label = document.createElementNS(ns, "text");
   label.setAttribute("x", 0);
@@ -228,13 +244,14 @@ function createResistor() {
 
 function createVoltageSource() {
   const ns = "http://www.w3.org/2000/svg";
+  const { radius, stroke, fill } = SETTINGS.components.voltage;
 
   const circle = document.createElementNS(ns, "circle");
   circle.setAttribute("cx", 0);
   circle.setAttribute("cy", 0);
-  circle.setAttribute("r", 30);
-  circle.setAttribute("fill", "#eef");
-  circle.setAttribute("stroke", "#333");
+  circle.setAttribute("r", radius);
+  circle.setAttribute("fill", fill);
+  circle.setAttribute("stroke", stroke);
 
   const label = document.createElementNS(ns, "text");
   label.setAttribute("x", 0);
@@ -248,13 +265,14 @@ function createVoltageSource() {
 
 function createCurrentSource() {
   const ns = "http://www.w3.org/2000/svg";
+  const { radius, stroke, fill } = SETTINGS.components.current;
 
   const circle = document.createElementNS(ns, "circle");
   circle.setAttribute("cx", 0);
   circle.setAttribute("cy", 0);
-  circle.setAttribute("r", 30);
-  circle.setAttribute("fill", "#efe");
-  circle.setAttribute("stroke", "#333");
+  circle.setAttribute("r", radius);
+  circle.setAttribute("fill", fill);
+  circle.setAttribute("stroke", stroke);
 
   const arrow = document.createElementNS(ns, "path");
   arrow.setAttribute("d", "M0,-14 L0,14 M-6,8 L0,14 L6,8");
@@ -275,8 +293,9 @@ function startWire(x, y) {
 
   previewWire = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
   previewWire.setAttribute("fill", "none");
-  previewWire.setAttribute("stroke", "#000");
-  previewWire.setAttribute("stroke-width", "2");
+  previewWire.setAttribute("stroke", SETTINGS.wire.stroke);
+  previewWire.setAttribute("stroke-width", SETTINGS.wire.width);
+  previewWire.setAttribute("pointer-events", "none");
   canvas.appendChild(previewWire);
   bringComponentsToFront();
 }
@@ -341,21 +360,23 @@ function commitWire(x, y) {
   previewWire.remove();
   previewWire = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
   previewWire.setAttribute("fill", "none");
-  previewWire.setAttribute("stroke", "#000");
-  previewWire.setAttribute("stroke-width", "2");
+  previewWire.setAttribute("stroke", SETTINGS.wire.stroke);
+  previewWire.setAttribute("stroke-width", SETTINGS.wire.width);
+  previewWire.setAttribute("pointer-events", "none");
   canvas.appendChild(previewWire);
   mergeCollinearWires(wireSegments);
 }
 
 function drawWireLine(id, x1, y1, x2, y2) {
   const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.dataset.id = id;
   line.setAttribute("x1", x1);
   line.setAttribute("y1", y1);
   line.setAttribute("x2", x2);
   line.setAttribute("y2", y2);
   line.setAttribute("stroke", "#000");
-  line.setAttribute("stroke-width", "2");
-  line.setAttribute("data-id", id);
+  line.setAttribute("stroke", SETTINGS.wire.stroke);
+  line.setAttribute("stroke-width", SETTINGS.wire.width);
   canvas.appendChild(line);
 
   enableWireDrag(line);
