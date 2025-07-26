@@ -479,7 +479,7 @@ function enableDrag(element) {
       newX = snapAndClamp(newX, padding, svgWidth - padding);
       newY = snapAndClamp(newY, padding, svgHeight - padding);
   
-      pos.el.setAttribute("transform", `translate(${newX},${newY}) rotate(${rotation})`);
+      moveComponent(pos.el, newX, newY, rotation);
     });
 
         // ✅ Move selected wires too
@@ -488,10 +488,7 @@ function enableDrag(element) {
       const newY1 = pos.y1 + dy;
       const newX2 = pos.x2 + dx;
       const newY2 = pos.y2 + dy;
-      pos.el.setAttribute("x1", newX1);
-      pos.el.setAttribute("y1", newY1);
-      pos.el.setAttribute("x2", newX2);
-      pos.el.setAttribute("y2", newY2);
+      moveWire(pos.el, newX1, newY1, newX2, newY2);
     });
   };
   
@@ -578,10 +575,7 @@ function enableWireDrag(lineElement) {
       const newX2 = pos.x2 + dx;
       const newY2 = pos.y2 + dy;
 
-      pos.el.setAttribute("x1", newX1);
-      pos.el.setAttribute("y1", newY1);
-      pos.el.setAttribute("x2", newX2);
-      pos.el.setAttribute("y2", newY2);
+      moveWire(pos.el, newX1, newY1, newX2, newY2);
     });
     
     // ✅ Move selected components too
@@ -589,7 +583,7 @@ function enableWireDrag(lineElement) {
       const rotation = parseInt(pos.el.dataset.rotation) || 0;
       const newX = pos.x + dx;
       const newY = pos.y + dy;
-      pos.el.setAttribute("transform", `translate(${newX},${newY}) rotate(${rotation})`);
+      moveComponent(pos.el, newX, newY, rotation);
     });
   };
 
@@ -663,6 +657,19 @@ function enableWireDrag(lineElement) {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   });
+}
+
+// Moves a component to a new (x, y) position with rotation
+function moveComponent(el, x, y, rotation) {
+  el.setAttribute("transform", `translate(${x},${y}) rotate(${rotation})`);
+}
+
+// Updates a wire element's endpoints to new coordinates
+function moveWire(el, x1, y1, x2, y2) {
+  el.setAttribute("x1", x1);
+  el.setAttribute("y1", y1);
+  el.setAttribute("x2", x2);
+  el.setAttribute("y2", y2);
 }
 
 // #endregion
