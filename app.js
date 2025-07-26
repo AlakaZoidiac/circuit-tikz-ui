@@ -974,6 +974,15 @@ editBtn.addEventListener("click", () => {
       shapeFill = SETTINGS.components[comp.dataset.type]?.fill || "#ff0000";
     }
     currentColor = normalizeHex(shapeFill.startsWith("#") ? shapeFill : rgbToHex(shapeFill));
+  } else if (selectedWires.length > 0) {
+    // Use stored color if available, fallback to stroke attribute
+    const seg = wireSegments.find(s => s.id === selectedWires[0].dataset.id);
+    if (seg && seg.color) {
+      currentColor = seg.color;
+    } else {
+      const stroke = selectedWires[0].getAttribute("stroke");
+      currentColor = stroke ? rgbToHex(stroke) : SETTINGS.wire.stroke;
+    }
   }
   
   // Set picker value
@@ -995,25 +1004,28 @@ editBtn.addEventListener("click", () => {
 colorPicker.addEventListener("input", (e) => {
   const newColor = e.target.value;
 
-  // Components → change fill of their shape
+  // Components → update fill and store in SETTINGS
   document.querySelectorAll("g.component.selected").forEach((comp) => {
     const shape = comp.querySelector("rect, circle");
     if (shape) shape.setAttribute("fill", newColor);
-    comp.dataset.fill = newColor; // store updated color on the component
+
+    // Store updated color for this component type
+    SETTINGS.components[comp.dataset.type].fill = newColor;
   });
 
-
-  // Wires → change stroke color
+  // Wires → update stroke and store in wireSegments
   document.querySelectorAll("line.selected").forEach((line) => {
     line.setAttribute("stroke", newColor);
+
+    // Persist wire color in wireSegments for detection later
+    const seg = wireSegments.find(s => s.id === line.dataset.id);
+    if (seg) seg.color = newColor;
   });
 
-    // Update SETTINGS for future detections
-  document.querySelectorAll("g.component.selected").forEach((comp) => {
-    const type = comp.dataset.type;
-    SETTINGS.components[type].fill = newColor;
-  });
+  // Also update default wire color for new wires
+  SETTINGS.wire.stroke = newColor;
 });
+
 
 // Change width of selected wires
 wireWidthSlider.addEventListener("input", (e) => {
