@@ -45,5 +45,3 @@ for c in components:
         comp = "generic"
     
     print(f"\\draw ({cx:.2f},{y1:.2f}) to[{comp}] ({cx:.2f},{y2:.2f});")
-
-
