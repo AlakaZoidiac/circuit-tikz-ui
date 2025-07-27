@@ -249,14 +249,18 @@ function componentIntersectsSelection(el, bounds) {
   );
 }
 
+// CLears selected components
+function clearSelection() {
+  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+}
+
 // #endregion
 
 // #region === Component Handling ===
 
 function addComponent(type) {
 
-  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
-
+  clearSelection();
   const group = createComponentGroup(type);
   canvas.appendChild(group);
   enableDrag(group);
@@ -636,7 +640,7 @@ function drawWireLine(id, x1, y1, x2, y2) {
 }
 
 function activateWireMode() {
-  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+  clearSelection();
   wireMode = true;
   wireStart = null;
   wireDirection = null;
@@ -838,7 +842,7 @@ function enableDrag(element) {
     }
     // If this component wasn’t selected, clear previous selections
     if (!element.classList.contains("selected")) {
-      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+      clearSelection();
       element.classList.add("selected");
     }
 
@@ -949,7 +953,7 @@ function enableWireDrag(lineElement) {
     }
     // If not already selected, clear others and select this wire
     if (!lineElement.classList.contains("selected")) {
-      document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+      clearSelection();
       lineElement.classList.add("selected");
     }
 
@@ -1009,7 +1013,7 @@ canvas.addEventListener("mousedown", (e) => {
   }
   if (e.button !== 0 || isDraggingComponent || wireMode) return;
 
-  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
+  clearSelection();
 
   document.body.classList.add("noselect");
 
@@ -1111,6 +1115,13 @@ window.addEventListener("keydown", (e) => {
   // 🗑️ Delete selected components and wires
   if (e.key === "Delete") {
     deleteSelectedElements();
+  }
+  
+  // ✅ Close dropdown and clear selection when pressing Esc
+  if (e.key === "Escape") {
+    clearSelection();                           // remove selected state
+    editDropdown.style.display = "none";        // hide dropdown
+    return;                                     // stop further handling
   }
 
   // ✅ WASD label positioning
@@ -1230,6 +1241,10 @@ const colorControl = document.getElementById("colorControl");
 const colorPicker = document.getElementById("selectedColor");
 const widthControl = document.getElementById("widthControl");
 const wireWidthSlider = document.getElementById("selectedWireWidth");
+const labelControl = document.getElementById("labelControl");
+const labelInputDropdown = document.getElementById("dropdownLabelInput");
+const labelPosDropdown = document.getElementById("dropdownLabelPos");
+
 
 // Toggle dropdown only if something is selected
 editBtn.addEventListener("click", () => {
@@ -1280,6 +1295,19 @@ editBtn.addEventListener("click", () => {
   // Toggle dropdown
   editDropdown.style.display =
     editDropdown.style.display === "none" ? "block" : "none";
+
+  if (selectedComponents.length > 0) {
+    labelControl.style.display = "block";
+
+    const firstLabel = selectedComponents[0].dataset.label;
+    const allSame = Array.from(selectedComponents).every(el => el.dataset.label === firstLabel);
+    labelInputDropdown.value = allSame ? firstLabel : "";
+    labelPosDropdown.value = selectedComponents[0].dataset.labelPos || "above";
+
+  } else {
+    labelControl.style.display = "none";
+  }
+
 });
 
 
@@ -1337,5 +1365,26 @@ document.addEventListener("click", (e) => {
     editDropdown.style.display = "none";
   }
 });
+
+labelInputDropdown.addEventListener("input", () => {
+  const newText = labelInputDropdown.value.trim();
+  document.querySelectorAll("g.component.selected").forEach(group => {
+    if (newText !== "") {
+      group.dataset.label = newText;
+      const label = group.querySelector(".component-label");
+      if (label) label.textContent = newText;
+      updateLabelPosition(group);
+    }
+  });
+});
+
+labelPosDropdown.addEventListener("change", () => {
+  const newPos = labelPosDropdown.value;
+  document.querySelectorAll("g.component.selected").forEach(group => {
+    group.dataset.labelPos = newPos;
+    updateLabelPosition(group);
+  });
+});
+
 
 // #endregion
