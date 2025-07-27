@@ -509,9 +509,17 @@ function updateLabelPosition(group) {
   // Reset previous transform
   label.removeAttribute("transform");
 
-  // Apply new local coordinates
-  label.setAttribute("x", localX);
-  label.setAttribute("y", localY);
+  // ✅ Read fine offsets from dataset
+  const offsetX = parseFloat(group.dataset.labelOffsetX) || 0;
+  const offsetY = parseFloat(group.dataset.labelOffsetY) || 0;
+
+  // ✅ Apply fine offsets to local position
+  const finalX = localX + offsetX;
+  const finalY = localY + offsetY;
+
+  // ✅ Set label position with offsets
+  label.setAttribute("x", finalX);
+  label.setAttribute("y", finalY);
 
   // Reapply counter-rotation
   applyLabelCounterRotation(group);
@@ -1244,6 +1252,9 @@ const wireWidthSlider = document.getElementById("selectedWireWidth");
 const labelControl = document.getElementById("labelControl");
 const labelInputDropdown = document.getElementById("dropdownLabelInput");
 const labelPosDropdown = document.getElementById("dropdownLabelPos");
+const offsetXInput = document.getElementById("labelOffsetX");
+const offsetYInput = document.getElementById("labelOffsetY");
+const resetOffsetBtn = document.getElementById("resetLabelOffset");
 
 
 // Toggle dropdown only if something is selected
@@ -1303,6 +1314,10 @@ editBtn.addEventListener("click", () => {
     const allSame = Array.from(selectedComponents).every(el => el.dataset.label === firstLabel);
     labelInputDropdown.value = allSame ? firstLabel : "";
     labelPosDropdown.value = selectedComponents[0].dataset.labelPos || "above";
+
+    const firstComp = selectedComponents[0];
+    offsetXInput.value = firstComp.dataset.labelOffsetX || 0;
+    offsetYInput.value = firstComp.dataset.labelOffsetY || 0;
 
   } else {
     labelControl.style.display = "none";
@@ -1382,6 +1397,33 @@ labelPosDropdown.addEventListener("change", () => {
   const newPos = labelPosDropdown.value;
   document.querySelectorAll("g.component.selected").forEach(group => {
     group.dataset.labelPos = newPos;
+    updateLabelPosition(group);
+  });
+});
+
+// ✅ When user changes X offset
+offsetXInput.addEventListener("input", () => {
+  document.querySelectorAll("g.component.selected").forEach(group => {
+    group.dataset.labelOffsetX = offsetXInput.value;
+    updateLabelPosition(group);
+  });
+});
+
+// ✅ When user changes Y offset
+offsetYInput.addEventListener("input", () => {
+  document.querySelectorAll("g.component.selected").forEach(group => {
+    group.dataset.labelOffsetY = offsetYInput.value;
+    updateLabelPosition(group);
+  });
+});
+
+// ✅ Reset offsets button
+resetOffsetBtn.addEventListener("click", () => {
+  offsetXInput.value = 0;
+  offsetYInput.value = 0;
+  document.querySelectorAll("g.component.selected").forEach(group => {
+    group.dataset.labelOffsetX = 0;
+    group.dataset.labelOffsetY = 0;
     updateLabelPosition(group);
   });
 });
