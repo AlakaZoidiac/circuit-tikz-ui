@@ -498,6 +498,7 @@ function drawWireLine(id, x1, y1, x2, y2) {
 }
 
 function activateWireMode() {
+  document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
   wireMode = true;
   wireStart = null;
   wireDirection = null;
