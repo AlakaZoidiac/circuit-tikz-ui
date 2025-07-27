@@ -462,7 +462,7 @@ function startLabelEdit(labelEl) {
 }
 
 function finishLabelEdit(input, labelEl, group) {
-  const newText = input.value.trim() || "Label";
+  const newText = input.value.trim();
   group.dataset.label = newText;
   labelEl.textContent = newText;
   updateLabelPosition(group);
