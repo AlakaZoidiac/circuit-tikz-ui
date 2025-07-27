@@ -461,7 +461,6 @@ function startLabelEdit(labelEl) {
   });
 }
 
-
 function finishLabelEdit(input, labelEl, group) {
   const newText = input.value.trim() || "Label";
   group.dataset.label = newText;
@@ -537,8 +536,6 @@ function applyLabelCounterRotation(group) {
   // ✅ Only apply counter-rotation around the label’s current (x,y)
   label.setAttribute("transform", `rotate(${-angle}, ${x}, ${y})`);
 }
-
-
 
 // #endregion
 
@@ -1213,7 +1210,13 @@ function exportComponentData() {
         x,
         y,
         rotation,
-        color: fill // include current component color
+        color: fill,
+        label: {
+          text: el.dataset.label || "",
+          pos: el.dataset.labelPos || "above",
+          offsetX: parseFloat(el.dataset.labelOffsetX) || 0,
+          offsetY: parseFloat(el.dataset.labelOffsetY) || 0
+        }
       });
     }
     
