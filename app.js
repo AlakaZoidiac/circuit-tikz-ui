@@ -377,24 +377,23 @@ function createVoltageSource() {
   circle.setAttribute("stroke", stroke);
   circle.setAttribute("stroke-width", "2");
 
-  // Plus sign on top
+  // Plus sign on bottom
   const plus = document.createElementNS(ns, "text");
   plus.setAttribute("x", 0);
-  plus.setAttribute("y", -radius / 2 + 11); // shifted upward
+  plus.setAttribute("y", radius / 2 + 5); // shifted downward
   plus.setAttribute("text-anchor", "middle");
   plus.setAttribute("font-size", "24");
   plus.textContent = "+";
 
-  // Minus sign on bottom
+  // Minus sign on top
   const minus = document.createElementNS(ns, "text");
   minus.setAttribute("x", 0);
-  minus.setAttribute("y", radius / 2 + 5); // shifted downward
+  minus.setAttribute("y", -radius / 2 + 11); // shifted upward
   minus.setAttribute("text-anchor", "middle");
   minus.setAttribute("font-size", "24");
   minus.textContent = "–";
   return [circle, plus, minus];
 }
-
 
 function createCurrentSource() {
   const ns = "http://www.w3.org/2000/svg";
@@ -410,14 +409,13 @@ function createCurrentSource() {
 
   // Downward arrow
   const arrow = document.createElementNS(ns, "path");
-  arrow.setAttribute("d", `M0,-${radius/2} L0,${radius/2} M-5,${radius/4} L0,${radius/2} L5,${radius/4}`);
+  arrow.setAttribute("d", `M0,-${radius/2} L0,${radius/2} M-5,-${radius/4} L0,-${radius/2} L5,-${radius/4}`);
   arrow.setAttribute("stroke", "#000");
   arrow.setAttribute("fill", "none");
   arrow.setAttribute("stroke-width", "2");
 
   return [circle, arrow];
 }
-
 
 // #endregion
 
