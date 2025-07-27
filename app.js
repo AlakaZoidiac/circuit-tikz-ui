@@ -304,6 +304,8 @@ function createComponentGroup(type) {
   group.dataset.labelOffsetX = 0;
   group.dataset.labelOffsetY = 0;
 
+  applyLabelCounterRotation(group);
+
   return group;
 }
 
@@ -430,8 +432,10 @@ function startLabelEdit(labelEl) {
   input.type = "text";
   input.value = group.dataset.label;
   input.style.position = "absolute";
-  input.style.left = `${screenX}px`;
+  input.style.left = `${screenX + bbox.width / 2}px`;
   input.style.top = `${screenY - 5}px`; // slightly above label
+  input.style.transform = "translateX(-50%)";
+  input.style.textAlign = "center";
   input.style.fontSize = `${bbox.height}px`;
   input.style.zIndex = "1000";
   input.style.background = "white";
@@ -458,8 +462,70 @@ function finishLabelEdit(input, labelEl, group) {
   const newText = input.value.trim() || "Label";
   group.dataset.label = newText;
   labelEl.textContent = newText;
+  updateLabelPosition(group);
   document.body.removeChild(input);
 }
+
+function updateLabelPosition(group) {
+  const label = group.querySelector(".component-label");
+  if (!label) return;
+
+  const comp = SETTINGS.components[group.dataset.type];
+  const bbox = label.getBBox();
+  const textWidth = bbox.width;
+
+  const angleDeg = parseFloat(group.dataset.rotation) || 0;
+  const angle = (angleDeg * Math.PI) / 180; // to radians
+
+  // Base margin offsets (global frame)
+  let marginX = 0, marginY = 0;
+  const margin = 10;
+  const w = comp.width || comp.radius * 2;
+  const h = comp.height || comp.radius * 2;
+
+  switch (group.dataset.labelPos) {
+    case "above":
+      marginY = -(h / 2 + margin);
+      break;
+    case "below":
+      marginY = h / 2 + margin + 10;
+      break;
+    case "left":
+      marginX = -(w / 2 + textWidth / 2 + margin);
+      break;
+    case "right":
+      marginX = w / 2 + textWidth / 2 + margin;
+      break;
+  }
+
+  // ✅ Transform global offset into the rotated <g> local coordinates
+  const localX = marginX * Math.cos(-angle) - marginY * Math.sin(-angle);
+  const localY = marginX * Math.sin(-angle) + marginY * Math.cos(-angle);
+
+  // Reset previous transform
+  label.removeAttribute("transform");
+
+  // Apply new local coordinates
+  label.setAttribute("x", localX);
+  label.setAttribute("y", localY);
+
+  // Reapply counter-rotation
+  applyLabelCounterRotation(group);
+}
+
+
+function applyLabelCounterRotation(group) {
+  const label = group.querySelector(".component-label");
+  if (!label) return;
+
+  const angle = parseFloat(group.dataset.rotation) || 0;
+  const x = parseFloat(label.getAttribute("x")) || 0;
+  const y = parseFloat(label.getAttribute("y")) || 0;
+
+  // ✅ Only apply counter-rotation around the label’s current (x,y)
+  label.setAttribute("transform", `rotate(${-angle}, ${x}, ${y})`);
+}
+
 
 
 // #endregion
@@ -1014,6 +1080,10 @@ window.addEventListener("mouseup", () => {
 });
 
 window.addEventListener("keydown", (e) => {
+  if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+    return;
+  }
+
   if (e.key === "Escape" && wireMode) {
     exitWireMode();
   }
@@ -1033,12 +1103,23 @@ window.addEventListener("keydown", (e) => {
   
       // Apply updated transform
       selected.setAttribute("transform", `translate(${x},${y}) rotate(${rotation})`);
+
+      updateLabelPosition(selected);
     });
   }  
 
   // 🗑️ Delete selected components and wires
   if (e.key === "Delete") {
     deleteSelectedElements();
+  }
+
+  // ✅ WASD label positioning
+  if (["w", "a", "s", "d"].includes(e.key.toLowerCase())) {
+    const direction = { w: "above", a: "left", s: "below", d: "right" }[e.key.toLowerCase()];
+    document.querySelectorAll("g.component.selected").forEach(group => {
+      group.dataset.labelPos = direction;
+      updateLabelPosition(group);
+    });
   }
 });
 
