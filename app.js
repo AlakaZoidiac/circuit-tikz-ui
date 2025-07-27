@@ -1249,6 +1249,15 @@ function exportComponentData() {
     null,
     2
   );
+  // --- Auto-download JSON export ---
+  const jsonData = JSON.stringify({ components: componentData, wires }, null, 2);
+  const blob = new Blob([jsonData], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "export.json";  // File name when downloaded
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // #endregion
