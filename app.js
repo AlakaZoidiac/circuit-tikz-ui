@@ -281,6 +281,29 @@ function createComponentGroup(type) {
   children.forEach(el => group.appendChild(el));
   group.dataset.fill = SETTINGS.components[type].fill; // Store initial color
 
+  // Add default label
+  const label = document.createElementNS(ns, "text");
+  label.textContent = "Label"; // default label text
+  label.setAttribute("text-anchor", "middle");
+  label.setAttribute("font-size", "16");
+  label.setAttribute("pointer-events", "auto");
+  label.setAttribute("style", "pointer-events:auto;");
+  label.classList.add("component-label");
+
+  // Position label above component by default
+  const comp = SETTINGS.components[type];
+  const labelY = -(comp.height ? comp.height / 2 : comp.radius) - 10;
+  label.setAttribute("x", 0);
+  label.setAttribute("y", labelY);
+
+  group.appendChild(label);
+
+  // Store label metadata for future use
+  group.dataset.label = "Label";
+  group.dataset.labelPos = "above";
+  group.dataset.labelOffsetX = 0;
+  group.dataset.labelOffsetY = 0;
+
   return group;
 }
 
@@ -387,6 +410,55 @@ function createCurrentSource() {
   arrow.setAttribute("stroke-width", "2");
 
   return [circle, arrow];
+}
+
+
+// #endregion
+
+// #region === Labels ===
+
+function startLabelEdit(labelEl) {
+  const group = labelEl.closest("g.component");
+
+  // Calculate absolute screen position with page scroll accounted
+  const bbox = labelEl.getBoundingClientRect();
+  const screenX = bbox.left + window.scrollX;
+  const screenY = bbox.top + window.scrollY;
+
+  // Create input element
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = group.dataset.label;
+  input.style.position = "absolute";
+  input.style.left = `${screenX}px`;
+  input.style.top = `${screenY - 5}px`; // slightly above label
+  input.style.fontSize = `${bbox.height}px`;
+  input.style.zIndex = "1000";
+  input.style.background = "white";
+  input.style.border = "1px solid black";
+  input.style.padding = "2px";
+  input.style.width = `${Math.max(bbox.width + 20, 60)}px`; // adapt width
+
+  // Prevent interference
+  input.addEventListener("mousedown", ev => ev.stopPropagation());
+
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+
+  // Save on blur or Enter
+  input.addEventListener("blur", () => finishLabelEdit(input, labelEl, group));
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") finishLabelEdit(input, labelEl, group);
+  });
+}
+
+
+function finishLabelEdit(input, labelEl, group) {
+  const newText = input.value.trim() || "Label";
+  group.dataset.label = newText;
+  labelEl.textContent = newText;
+  document.body.removeChild(input);
 }
 
 
@@ -864,6 +936,11 @@ function moveWire(el, x1, y1, x2, y2) {
 // #region === Event Bindings ===
 
 canvas.addEventListener("mousedown", (e) => {
+  if (e.target.classList.contains("component-label")) {
+    e.preventDefault();
+    startLabelEdit(e.target);
+    return;                 
+  }
   if (e.button !== 0 || isDraggingComponent || wireMode) return;
 
   document.querySelectorAll(".selected").forEach(el => el.classList.remove("selected"));
