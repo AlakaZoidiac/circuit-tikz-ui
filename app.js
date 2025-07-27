@@ -485,19 +485,27 @@ function updateLabelPosition(group) {
   const margin = 10;
   const w = comp.width || comp.radius * 2;
   const h = comp.height || comp.radius * 2;
+  const normalizedAngle = ((angleDeg % 360) + 360) % 360;
+  const rotated = (normalizedAngle === 90 || normalizedAngle === 270);
+
+  // Use boxW and boxH for correct bounding box after rotation
+  const boxW = rotated ? h : w;
+  const boxH = rotated ? w : h;
+
+
 
   switch (group.dataset.labelPos) {
     case "above":
-      marginY = -(h / 2 + margin);
+      marginY = -(boxH / 2 + margin);
       break;
     case "below":
-      marginY = h / 2 + margin + 10;
+      marginY = boxH / 2 + margin + 10;
       break;
     case "left":
-      marginX = -(w / 2 + textWidth / 2 + margin);
+      marginX = -(boxW / 2 + textWidth / 2 + margin);
       break;
     case "right":
-      marginX = w / 2 + textWidth / 2 + margin;
+      marginX = boxW / 2 + textWidth / 2 + margin;
       break;
   }
 
