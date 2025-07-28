@@ -1,7 +1,7 @@
 // #region === Global Constants and State ===
 
 // Canvas and grid setup
-const GRID_SIZE = 40;
+const GRID_SIZE = 50;
 const canvas = document.getElementById("canvas");
 
 // Component and wire state

@@ -45,7 +45,7 @@ def add_edge_wires(w, c, new_wires):
     x2, y2 = w["x2"], w["y2"]
 
     if c["type"] == "resistor":
-        offset = 0.75 * 75
+        offset = 0.65 * 75
     else:
         offset = 0.5 * 75
 
@@ -93,8 +93,8 @@ for c in components:
     cy = -c["y"] / 75
 
     if c["type"] == "resistor":
-        y1 = cy - 0.75
-        y2 = cy + 0.75
+        y1 = cy - 0.65
+        y2 = cy + 0.65
     else:
         y1 = cy - 0.5
         y2 = cy + 0.5
