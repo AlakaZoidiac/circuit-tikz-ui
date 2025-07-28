@@ -77,7 +77,7 @@ for c in components:
 
 
 print(f"\\documentclass[border=5mm]{{standalone}}")
-print(f"\\usepackage{{circuitikz}}")
+print(f"\\usepackage[siunitx]{{circuitikz}}")
 print(f"\\begin{{document}}")
 print(f"\\begin{{circuitikz}}[american]")
 
@@ -89,27 +89,61 @@ for w in wires:
     print(f"\\draw ({x1:.2f},{-y1:.2f}) -- ({x2:.2f},{-y2:.2f});")
 
 for c in components:
-    cx = c["x"] / 75
-    cy = -c["y"] / 75
+    x1 = x2 = cx = c["x"] / 75
+    y1 = y2 = cy = -c["y"] / 75
 
-    if c["type"] == "resistor":
-        y1 = cy - 0.65
-        y2 = cy + 0.65
-    else:
-        y1 = cy - 0.5
-        y2 = cy + 0.5
-    
+    if (c["rotation"] % 180) == 0:
+        if c["type"] == "resistor":
+            x1 = cx - 0.65
+            x2 = cx + 0.65
+        else:
+            y1 = cy - 0.5
+            y2 = cy + 0.5
+    elif (c["rotation"] % 180) == 90:
+        if c["type"] == "resistor":
+            y1 = cy - 0.65
+            y2 = cy + 0.65
+        else:
+            x1 = cx - 0.5
+            x2 = cx + 0.5
+
     # Map types to CircuitikZ
     if c["type"] == "voltage":
         comp = "vsource"
+        if (c["rotation"] == 180 or c["rotation"] == 270):
+            comp += ", invert"
     elif c["type"] == "current":
         comp = "isource"
+        if (c["rotation"] == 180 or c["rotation"] == 270):
+            comp += ", invert"
     elif c["type"] == "resistor":
         comp = "resistor, european"
     else:
         comp = "generic"
     
-    print(f"\\draw ({cx:.2f},{y1:.2f}) to[{comp}] ({cx:.2f},{y2:.2f});")
+    lbl = c["label"]
+    if lbl["text"] != "":
+        if (lbl["pos"] == "above") or (lbl["pos"] == "left"):
+            comp += ", l^="
+        else:
+            comp += ", l_="
+        comp += lbl["text"]
+
+        if c["type"] == "voltage":
+            comp += "<\\volt>"
+        elif c["type"] == "current":
+            comp += "<\\ampere>"
+        elif c["type"] == "resistor":
+            comp += "<\\ohm>"
+        else:
+            comp = "generic"
+
+    
+
+
+    print(f"\\draw[font = {{\\small}}] ({x1:.2f},{y1:.2f}) to[{comp}] ({x2:.2f},{y2:.2f});")
 
 print(f"\\end{{circuitikz}}")
 print(f"\\end{{document}}")
+
+# Create rearrange wires (make all wire polarity left to right (and up to down)).
