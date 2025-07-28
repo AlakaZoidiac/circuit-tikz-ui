@@ -76,6 +76,10 @@ for c in components:
 
 
 
+print(f"\\documentclass[border=5mm]{{standalone}}")
+print(f"\\usepackage{{circuitikz}}")
+print(f"\\begin{{document}}")
+print(f"\\begin{{circuitikz}}[american]")
 
 for w in wires:
     x1 = w["x1"] / 75
@@ -106,3 +110,6 @@ for c in components:
         comp = "generic"
     
     print(f"\\draw ({cx:.2f},{y1:.2f}) to[{comp}] ({cx:.2f},{y2:.2f});")
+
+print(f"\\end{{circuitikz}}")
+print(f"\\end{{document}}")
