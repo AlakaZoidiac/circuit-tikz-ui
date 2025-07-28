@@ -44,7 +44,10 @@ def add_edge_wires(w, c, new_wires):
     x1, y1 = w["x1"], w["y1"]
     x2, y2 = w["x2"], w["y2"]
 
-    offset = 0.5 * 75
+    if c["type"] == "resistor":
+        offset = 0.75 * 75
+    else:
+        offset = 0.5 * 75
 
     # Precompute component endpoints in app coordinates
     upper = min(cy - offset, cy + offset)
@@ -84,8 +87,13 @@ for w in wires:
 for c in components:
     cx = c["x"] / 75
     cy = -c["y"] / 75
-    y1 = cy - 0.5
-    y2 = cy + 0.5
+
+    if c["type"] == "resistor":
+        y1 = cy - 0.75
+        y2 = cy + 0.75
+    else:
+        y1 = cy - 0.5
+        y2 = cy + 0.5
     
     # Map types to CircuitikZ
     if c["type"] == "voltage":
