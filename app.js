@@ -47,6 +47,13 @@ const SETTINGS = {
       stroke: "#000",
       fill: "#efe",
       draw: createCurrentSource
+    },
+    ground: {
+      width: 20,
+      height: 20,
+      stroke: "#000",
+      fill: "#fff",
+      draw: createGroundSymbol
     }
   }
 };
@@ -416,6 +423,57 @@ function createCurrentSource() {
 
   return [circle, arrow];
 }
+
+function createGroundSymbol() {
+  const ns = "http://www.w3.org/2000/svg";
+  const group = [];
+
+  // Transparent hitbox (for easier clicking)
+  const hitbox = document.createElementNS(ns, "rect");
+  hitbox.setAttribute("x", -15);
+  hitbox.setAttribute("y", -5);
+  hitbox.setAttribute("width", 30);
+  hitbox.setAttribute("height", 37);
+  hitbox.setAttribute("fill", "transparent");
+  hitbox.setAttribute("pointer-events", "all"); // Make it respond to mouse events
+  hitbox.setAttribute("class", "hitbox");
+  group.push(hitbox);
+
+  // Ground lines
+  const line1 = document.createElementNS(ns, "line");
+  line1.setAttribute("x1", -15);
+  line1.setAttribute("y1", 12);
+  line1.setAttribute("x2", 15);
+  line1.setAttribute("y2", 12);
+
+  const line2 = document.createElementNS(ns, "line");
+  line2.setAttribute("x1", -10);
+  line2.setAttribute("y1", 18);
+  line2.setAttribute("x2", 10);
+  line2.setAttribute("y2", 18);
+
+  const line3 = document.createElementNS(ns, "line");
+  line3.setAttribute("x1", -4);
+  line3.setAttribute("y1", 24);
+  line3.setAttribute("x2", 4);
+  line3.setAttribute("y2", 24);
+
+  const line4 = document.createElementNS(ns, "line");
+  line4.setAttribute("x1", 0);
+  line4.setAttribute("y1", 0);
+  line4.setAttribute("x2", 0);
+  line4.setAttribute("y2", 12);
+
+  [line1, line2, line3, line4].forEach(line => {
+    line.setAttribute("stroke", "#000");
+    line.setAttribute("stroke-width", "2");
+  });
+
+  group.push(line1, line2, line3, line4);
+  return group;
+}
+
+
 
 // #endregion
 

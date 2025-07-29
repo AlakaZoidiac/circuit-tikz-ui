@@ -69,8 +69,13 @@ text {
 /* ✅ For selected components: only stroke turns red, no fill */
 g.component.selected rect,
 g.component.selected circle,
-g.component.selected path {
+g.component.selected path,
+g.component.selected line {
   stroke: red !important;
+}
+
+g.component.selected .hitbox {
+  stroke: none !important;
 }
 
 /* ✅ Make text inside selected components red too */
