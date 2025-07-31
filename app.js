@@ -67,7 +67,6 @@ const SETTINGS = {
   }
 };
 
-
 // #endregion
 
 // #region === Helper Functions ===
@@ -487,15 +486,15 @@ function createCurrentArrow() {
   const group = [];
 
   // Transparent hitbox (for easier clicking)
-  // const hitbox = document.createElementNS(ns, "rect");
-  // hitbox.setAttribute("x", -15);
-  // hitbox.setAttribute("y", -5);
-  // hitbox.setAttribute("width", 30);
-  // hitbox.setAttribute("height", 37);
-  // hitbox.setAttribute("fill", "transparent");
-  // hitbox.setAttribute("pointer-events", "all"); // Make it respond to mouse events
-  // hitbox.setAttribute("class", "hitbox");
-  // group.push(hitbox);
+  const hitbox = document.createElementNS(ns, "rect");
+  hitbox.setAttribute("x", -5);
+  hitbox.setAttribute("y", 20);
+  hitbox.setAttribute("width", 10);
+  hitbox.setAttribute("height", 5);
+  hitbox.setAttribute("fill", "transparent");
+  hitbox.setAttribute("pointer-events", "all"); // Make it respond to mouse events
+  hitbox.setAttribute("class", "hitbox");
+  group.push(hitbox);
 
   // Arrow lines
   const line1 = document.createElementNS(ns, "line");
@@ -1400,8 +1399,9 @@ editBtn.addEventListener("click", () => {
 
   if (selectedComponents.length > 0) {
     const comp = selectedComponents[0];
-    const shape = comp.children[0];
+    const shape = comp.querySelector("rect, circle");
     let shapeFill = shape ? shape.getAttribute("fill") : null;
+
     if (!shapeFill) {
       shapeFill = SETTINGS.components[comp.dataset.type]?.fill || "#ff0000";
     }
