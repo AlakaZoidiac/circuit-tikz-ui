@@ -49,11 +49,20 @@ const SETTINGS = {
       draw: createCurrentSource
     },
     ground: {
-      width: 20,
-      height: 20,
+      width: 30,  // set to visual width of ground symbol
+      height: 37, // set to visual height based on your SVG drawing
       stroke: "#000",
       fill: "#fff",
+      centerOffset: { x: 0, y: 16 },  // ✅ approx halfway down
       draw: createGroundSymbol
+    },
+    currentarrow: {
+      width: 10,   // eyeballed width of the arrowhead
+      height: 25,  // from line endpoints
+      stroke: "#000",
+      fill: "#fff",
+      draw: createCurrentArrow,
+      centerOffset: { x: 0, y: 25 } // ✅ center vertically shifted down
     }
   }
 };
@@ -302,10 +311,10 @@ function createComponentGroup(type) {
   label.classList.add("component-label");
 
   // Position label above component by default
-  const comp = SETTINGS.components[type];
-  const labelY = -(comp.height ? comp.height / 2 : comp.radius) - 10;
-  label.setAttribute("x", 0);
-  label.setAttribute("y", labelY);
+  // const comp = SETTINGS.components[type];
+  // const labelY = -(comp.height ? comp.height / 2 : comp.radius) - 10;
+  // label.setAttribute("x", 0);
+  // label.setAttribute("y", labelY);
 
   group.appendChild(label);
 
@@ -314,6 +323,7 @@ function createComponentGroup(type) {
   group.dataset.labelPos = "above";
   group.dataset.labelOffsetX = 0;
   group.dataset.labelOffsetY = 0;
+  updateLabelPosition(group);
 
   applyLabelCounterRotation(group);
 
@@ -328,7 +338,6 @@ function createShapeByType(type) {
   console.warn(`Unknown component type: ${type}`);
   return document.createElementNS("http://www.w3.org/2000/svg", "g");
 }
-
 
 // Brings all component elements to the front of the SVG stacking order.
 function bringComponentsToFront() {
@@ -473,7 +482,42 @@ function createGroundSymbol() {
   return group;
 }
 
+function createCurrentArrow() {
+  const ns = "http://www.w3.org/2000/svg";
+  const group = [];
 
+  // Transparent hitbox (for easier clicking)
+  // const hitbox = document.createElementNS(ns, "rect");
+  // hitbox.setAttribute("x", -15);
+  // hitbox.setAttribute("y", -5);
+  // hitbox.setAttribute("width", 30);
+  // hitbox.setAttribute("height", 37);
+  // hitbox.setAttribute("fill", "transparent");
+  // hitbox.setAttribute("pointer-events", "all"); // Make it respond to mouse events
+  // hitbox.setAttribute("class", "hitbox");
+  // group.push(hitbox);
+
+  // Arrow lines
+  const line1 = document.createElementNS(ns, "line");
+  line1.setAttribute("x1", 0);
+  line1.setAttribute("y1", 20);
+  line1.setAttribute("x2", 5);
+  line1.setAttribute("y2", 25);
+
+  const line2 = document.createElementNS(ns, "line");
+  line2.setAttribute("x1", 0);
+  line2.setAttribute("y1", 20);
+  line2.setAttribute("x2", -5);
+  line2.setAttribute("y2", 25);
+
+  [line1, line2].forEach(line => {
+    line.setAttribute("stroke", "#000");
+    line.setAttribute("stroke-width", "2");
+  });
+
+  group.push(line1, line2);
+  return group;
+}
 
 // #endregion
 
@@ -541,6 +585,7 @@ function updateLabelPosition(group) {
   const margin = 10;
   const w = comp.width || comp.radius * 2;
   const h = comp.height || comp.radius * 2;
+  const centerOffset = comp.centerOffset || { x: 0, y: 0 };
   const normalizedAngle = ((angleDeg % 360) + 360) % 360;
   const rotated = (normalizedAngle === 90 || normalizedAngle === 270);
 
@@ -565,29 +610,31 @@ function updateLabelPosition(group) {
       break;
   }
 
-  // ✅ Transform global offset into the rotated <g> local coordinates
+  marginX += centerOffset.x;
+  marginY += centerOffset.y;
+
+  // Transform global offset into the rotated <g> local coordinates
   const localX = marginX * Math.cos(-angle) - marginY * Math.sin(-angle);
   const localY = marginX * Math.sin(-angle) + marginY * Math.cos(-angle);
 
   // Reset previous transform
   label.removeAttribute("transform");
 
-  // ✅ Read fine offsets from dataset
+  // Read fine offsets from dataset
   const offsetX = parseFloat(group.dataset.labelOffsetX) || 0;
   const offsetY = parseFloat(group.dataset.labelOffsetY) || 0;
 
-  // ✅ Apply fine offsets to local position
+  // Apply fine offsets to local position
   const finalX = localX + offsetX;
   const finalY = localY + offsetY;
 
-  // ✅ Set label position with offsets
+  // Set label position with offsets
   label.setAttribute("x", finalX);
   label.setAttribute("y", finalY);
 
   // Reapply counter-rotation
   applyLabelCounterRotation(group);
 }
-
 
 function applyLabelCounterRotation(group) {
   const label = group.querySelector(".component-label");
